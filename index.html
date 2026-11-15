@@ -883,7 +883,7 @@ details.mo summary::-webkit-details-marker{display:none}
         ${LOCAL && !CFG ? '<p class="muted" style="margin:10px 0 0">Đây là bản xem thử trên máy tính (đọc / ghi thẳng vào app). Trên điện thoại trang đi qua Gist.</p>' : '<button class="btn risk" id="bOut" style="width:100%;margin-top:8px">Xóa dữ liệu khỏi điện thoại này</button>'}</div>
       ${CFG && !canWrite() ? `<div class="card set"><h2>Bật quyền sửa (thêm mã, nhập lệnh)</h2><p style="margin:0;color:var(--tx2)">Cách 1: trên máy tính tick «Cho phép điện thoại sửa» rồi lấy lại đường dẫn cài đặt, mở trên điện thoại. Cách 2: dán mã truy cập GitHub (quyền Gist) – mã chỉ lưu trong điện thoại này, không gửi đi đâu ngoài github.com.</p><label for="tkIn">Mã truy cập GitHub</label><input id="tkIn" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="bTok">Bật quyền sửa</button></div>` : ''}
       <div class="card"><h2>7 nguyên tắc của mình</h2>${RULES.map((r, i) => `<div class="rule"><span>${i + 1}</span><b>${r[0]}.</b> ${r[1]}</div>`).join('')}</div>
-      <p class="muted" style="margin:0 4px">[${APPV}] Emilya chỉ hiển thị số liệu app đã tính – không phải lời khuyên mua bán.</p>`;
+      <p class="muted" style="margin:0 4px">Emilya chỉ hiển thị số liệu app đã tính – không phải lời khuyên mua bán.</p>`;
   }
   function renderSetup(err) {
     $('#p-setup').innerHTML = `<div class="card set"><h2>Cài đặt lần đầu</h2>
