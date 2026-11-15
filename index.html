@@ -176,6 +176,7 @@ button{cursor:pointer}
   const hm = ts => (ts ? new Date(ts * 1000).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '');
   const dmhm = ts => { if (!ts) return 'chưa có'; const d = new Date(ts * 1000), t = new Date(); return (d.toDateString() === t.toDateString() ? '' : d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) + ' ') + hm(ts); };
   const LS = { get(k, d) { try { const v = localStorage.getItem('qm-' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('qm-' + k, JSON.stringify(v)); } catch (e) { /* bỏ qua */ } }, del(k) { try { localStorage.removeItem('qm-' + k); } catch (e) { /* bỏ qua */ } } };
+  const APPV = 'bản 15/11 v6';
   const LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';   // xem thử trên máy tính: đọc thẳng app, không cần Gist
   const th = LS.get('theme', '') || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   document.documentElement.dataset.theme = th;
@@ -250,10 +251,10 @@ button{cursor:pointer}
   };
   const watch = () => WATCH || (SNAP && SNAP.watch) || { tickers: [], notes: {}, targets: {}, mt: {}, gone: {} };
   const held = () => ((SNAP && SNAP.hold) || []).map(h => h.t);
-  const peek = () => canWrite() ? [] : (LS.get('peek', []) || []);   // xem nhanh giá: chỉ lưu trên điện thoại này, không đồng bộ
-  const wl = () => { const w = watch().tickers; return w.concat(peek().filter(t => !w.includes(t))); };
-  const tickers = () => { const w = wl(), h = held(); return VIEW === 'watch' ? w : VIEW === 'held' ? h : w.concat(h.filter(t => !w.includes(t))); };
-  const allTickers = () => { const w = wl(), h = held(); return w.concat(h.filter(t => !w.includes(t))); };
+  const peek = () => (LS.get('peek', []) || []).filter(t => !watch().tickers.includes(t) && !held().includes(t));   // xem nhanh giá: chỉ lưu trên điện thoại này, không đồng bộ
+  const wl = () => watch().tickers;
+  const tickers = () => { const w = wl(), h = held(); return VIEW === 'watch' ? w : VIEW === 'held' ? h : peek().concat(w, h.filter(t => !w.includes(t))); };
+  const allTickers = () => { const w = wl(), h = held(); return peek().concat(w, h.filter(t => !w.includes(t))); };
   const quote = t => Object.assign({}, (SNAP && SNAP.q && SNAP.q[t]) || {}, Q[t] || {});
 
   /* ------------------------------------------------------------------ Gist */
@@ -360,7 +361,7 @@ button{cursor:pointer}
       ${inW && canWrite() ? `<label for="tg-${t}">Giá chờ mua (nghìn đồng)</label><input id="tg-${t}" data-tg="${t}" inputmode="decimal" placeholder="Ví dụ 42,5" value="${isN(tg) ? n2.format(tg / 1000) : ''}">
       <label for="nt-${t}">Ghi chú – vì sao theo dõi?</label><textarea id="nt-${t}" data-nt="${t}" maxlength="500">${esc((w.notes || {})[t] || '')}</textarea>
       <div class="ac"><button class="btn" data-save="${t}">Lưu</button><button class="btn risk" data-rm="${t}">Bỏ theo dõi</button></div>`
-      : !canWrite() && peek().includes(t) ? `<div class="ac"><button class="btn risk" data-peekrm="${t}">Bỏ khỏi xem nhanh</button></div><p class="muted" style="margin:8px 0 0">Mã này chỉ nằm trong điện thoại, chưa lưu vào danh sách theo dõi (cần bật quyền sửa ở tab Emilya).</p>`
+      : peek().includes(t) ? `<div class="ac">${canWrite() ? `<button class="btn ghost" data-addw="${t}">☆ Lưu vào theo dõi</button>` : ''}<button class="btn risk" data-peekrm="${t}">Bỏ khỏi xem nhanh</button></div><p class="muted" style="margin:8px 0 0">Mã xem nhanh – chỉ nằm trong điện thoại, không đồng bộ.${canWrite() ? '' : ' Muốn lưu vào Theo dõi: bật quyền sửa ở tab Emilya.'}</p>`
       : !inW && canWrite() ? `<div class="ac"><button class="btn ghost" data-addw="${t}">☆ Thêm vào theo dõi</button></div>`
       : inW && (w.notes || {})[t] ? `<p class="muted" style="margin:10px 0 0">${esc(w.notes[t])}</p>` : ''}`;
   }
@@ -369,7 +370,7 @@ button{cursor:pointer}
     const ses = session(), ts = tickers(), s = SNAP || {};
     $('#bar').innerHTML = `<span class="pill${ses.live && LIVE_OK ? ' live' : ''}">${esc(ses.label)}</span>` + (IDX.length ? IDX : s.idx || []).map(i => `<span class="pill num"><small>${esc(i.name)}</small>${n2.format(i.v)} <b class="${ud(i.pct)}">${fm(i.pct, 2)}</b></span>`).join('');
     $$('#seg button').forEach(b => { b.classList.toggle('on', b.dataset.v === VIEW); b.textContent = ({ watch: 'Theo dõi', held: 'Đang giữ', all: 'Tất cả' })[b.dataset.v] + ' ' + (b.dataset.v === 'watch' ? wl().length : b.dataset.v === 'held' ? held().length : allTickers().length); });
-    $('#add').hidden = false; $('#add input').placeholder = canWrite() ? 'Thêm mã theo dõi…' : 'Xem nhanh giá một mã…';
+    $('#add').hidden = VIEW === 'held'; $('#add input').placeholder = VIEW === 'watch' && canWrite() ? 'Thêm mã theo dõi (đồng bộ máy tính)…' : 'Gõ mã để xem nhanh giá…';
     const sig = ts.join(',') + '|' + OPENROW + '|' + (SNAP ? SNAP.ts : 0) + '|' + JSON.stringify(watch().targets) + JSON.stringify(watch().notes);
     if (sig !== LSIG) {
       LSIG = sig;
@@ -377,7 +378,7 @@ button{cursor:pointer}
         : `<div class="empty">${VIEW === 'held' ? 'Chưa có mã nào đang nắm giữ.' : 'Chưa theo dõi mã nào.' + (canWrite() ? ' Gõ mã vào ô ở trên để thêm.' : ' Vào tab Emilya, dán mã truy cập GitHub để thêm mã ngay trên điện thoại.')}</div>`;
     }
     const age = QTS || s.qts;
-    $('#src').textContent = LIVE_OK ? `Giá từ ${QSRC}, cập nhật ${hm(QTS)}${ses.live ? ' · tự lấy lại mỗi 15 giây' : ''}. Có thể chậm vài giây.` : `Giá do máy tính đẩy lên lúc ${dmhm(age)}${LIVE_OK === false ? ' (điện thoại chưa tự lấy được giá trực tiếp – mở app trên máy tính để giá được đẩy lên đều)' : ''}.`;
+    $('#src').textContent = '[' + APPV + '] ' + (LIVE_OK ? `Giá từ ${QSRC}, cập nhật ${hm(QTS)}${ses.live ? ' · tự lấy lại mỗi 15 giây' : ''}. Có thể chậm vài giây.` : `Giá do máy tính đẩy lên lúc ${dmhm(age)}${LIVE_OK === false ? ' (điện thoại chưa tự lấy được giá trực tiếp – mở app trên máy tính để giá được đẩy lên đều)' : ''}.`);
   }
   /* có giá mới: chỉ sửa đúng dòng thay đổi + nháy màu */
   function paint(prev) {
@@ -438,7 +439,7 @@ button{cursor:pointer}
     const s = SNAP;
     $('#p-me').innerHTML = `<div class="card"><h2>7 nguyên tắc của mình</h2>${RULES.map((r, i) => `<div class="rule"><span>${i + 1}</span><b>${r[0]}.</b> ${r[1]}</div>`).join('')}</div>
       <div class="card"><h2>Đồng bộ</h2>
-        <div class="note"><b>Máy tính đẩy lên lần cuối</b>${s ? dmhm(s.ts) : 'chưa có'}</div>
+        <div class="note"><b>Phiên bản trang</b>${APPV} · có ô “Xem nhanh giá” và “Bật quyền sửa”</div><div class="note"><b>Máy tính đẩy lên lần cuối</b>${s ? dmhm(s.ts) : 'chưa có'}</div>
         <div class="note"><b>Giá trong phiên</b>${LIVE_OK ? 'Điện thoại tự lấy từ ' + esc(QSRC) : LIVE_OK === false ? 'Chưa tự lấy được – đang dùng giá máy tính đẩy lên' : 'Đang kiểm tra…'}</div>
         <div class="note"><b>Sửa danh sách theo dõi trên điện thoại</b>${canWrite() ? (DIRTY ? 'Có thay đổi đang chờ đẩy lên' : 'Được phép · mọi thay đổi đã lưu') : 'Chỉ xem (đường dẫn cài đặt không kèm quyền ghi)'}</div>
         <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" id="bSync" style="flex:1">⟳ Tải lại</button><button class="btn ghost" id="bTheme" style="flex:1">${document.documentElement.dataset.theme === 'dark' ? 'Nền sáng' : 'Nền tối'}</button></div>
@@ -505,13 +506,13 @@ button{cursor:pointer}
     if (b.classList.contains('rh')) { OPENROW = OPENROW === t ? '' : t; renderBoard(); return; }
     if (b.dataset.save) { const v = parseP(row.querySelector('[data-tg]').value); if (isNaN(v)) { row.querySelector('[data-tg]').focus(); return; } stamp(t); if (v) WATCH.targets[t] = v; else delete WATCH.targets[t]; const n = row.querySelector('[data-nt]').value.trim(); if (n) WATCH.notes[t] = n; else delete WATCH.notes[t]; OPENROW = ''; changed(); render(); }
     else if (b.dataset.rm) { stamp(t); WATCH.tickers = WATCH.tickers.filter(x => x !== t); delete WATCH.notes[t]; delete WATCH.targets[t]; delete WATCH.mt[t]; WATCH.gone[t] = now(); OPENROW = ''; changed(); render(); }
-    else if (b.dataset.addw) { stamp(t); if (!WATCH.tickers.includes(t)) WATCH.tickers.push(t); delete WATCH.gone[t]; changed(); render(); }
+    else if (b.dataset.addw) { LS.set('peek', (LS.get('peek', []) || []).filter(x => x !== t)); stamp(t); if (!WATCH.tickers.includes(t)) WATCH.tickers.push(t); delete WATCH.gone[t]; changed(); render(); }
   });
   $('#add').addEventListener('submit', e => {
     e.preventDefault();
     const i = e.target.querySelector('input'), t = i.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (t.length < 3) { flash('Mã cổ phiếu có ít nhất 3 ký tự.', true, 2500); return; }
-    if (!canWrite()) { const P = peek(); if (!P.includes(t) && !watch().tickers.includes(t)) P.push(t); LS.set('peek', P); i.value = ''; VIEW = 'watch'; OPENROW = ''; LSIG = ''; render(); liveBad = 0; live(); flash('Đã thêm để xem giá (chỉ trên điện thoại này).', false, 3000); return; }
+    if (VIEW !== 'watch' || !canWrite()) { const P = LS.get('peek', []) || []; if (!P.includes(t)) P.unshift(t); LS.set('peek', P.slice(0, 30)); i.value = ''; const was = VIEW; VIEW = 'all'; OPENROW = t; LSIG = ''; render(); liveBad = 0; live(); flash(was === 'watch' ? 'Chưa bật quyền sửa nên mã chỉ được xem nhanh ở “Tất cả”. Bật ở tab Emilya để lưu vào Theo dõi.' : 'Đã thêm để xem giá ở “Tất cả” (chỉ trên điện thoại này).', was === 'watch', 4000); return; }
     stamp(t); if (!WATCH.tickers.includes(t)) WATCH.tickers.push(t); delete WATCH.gone[t];
     i.value = ''; VIEW = VIEW === 'held' ? 'watch' : VIEW; changed(); render(); liveBad = 0; live();
   });
