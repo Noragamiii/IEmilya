@@ -250,8 +250,10 @@ button{cursor:pointer}
   };
   const watch = () => WATCH || (SNAP && SNAP.watch) || { tickers: [], notes: {}, targets: {}, mt: {}, gone: {} };
   const held = () => ((SNAP && SNAP.hold) || []).map(h => h.t);
-  const tickers = () => { const w = watch().tickers, h = held(); return VIEW === 'watch' ? w : VIEW === 'held' ? h : w.concat(h.filter(t => !w.includes(t))); };
-  const allTickers = () => { const w = watch().tickers, h = held(); return w.concat(h.filter(t => !w.includes(t))); };
+  const peek = () => canWrite() ? [] : (LS.get('peek', []) || []);   // xem nhanh giá: chỉ lưu trên điện thoại này, không đồng bộ
+  const wl = () => { const w = watch().tickers; return w.concat(peek().filter(t => !w.includes(t))); };
+  const tickers = () => { const w = wl(), h = held(); return VIEW === 'watch' ? w : VIEW === 'held' ? h : w.concat(h.filter(t => !w.includes(t))); };
+  const allTickers = () => { const w = wl(), h = held(); return w.concat(h.filter(t => !w.includes(t))); };
   const quote = t => Object.assign({}, (SNAP && SNAP.q && SNAP.q[t]) || {}, Q[t] || {});
 
   /* ------------------------------------------------------------------ Gist */
@@ -358,6 +360,7 @@ button{cursor:pointer}
       ${inW && canWrite() ? `<label for="tg-${t}">Giá chờ mua (nghìn đồng)</label><input id="tg-${t}" data-tg="${t}" inputmode="decimal" placeholder="Ví dụ 42,5" value="${isN(tg) ? n2.format(tg / 1000) : ''}">
       <label for="nt-${t}">Ghi chú – vì sao theo dõi?</label><textarea id="nt-${t}" data-nt="${t}" maxlength="500">${esc((w.notes || {})[t] || '')}</textarea>
       <div class="ac"><button class="btn" data-save="${t}">Lưu</button><button class="btn risk" data-rm="${t}">Bỏ theo dõi</button></div>`
+      : !canWrite() && peek().includes(t) ? `<div class="ac"><button class="btn risk" data-peekrm="${t}">Bỏ khỏi xem nhanh</button></div><p class="muted" style="margin:8px 0 0">Mã này chỉ nằm trong điện thoại, chưa lưu vào danh sách theo dõi (cần bật quyền sửa ở tab Emilya).</p>`
       : !inW && canWrite() ? `<div class="ac"><button class="btn ghost" data-addw="${t}">☆ Thêm vào theo dõi</button></div>`
       : inW && (w.notes || {})[t] ? `<p class="muted" style="margin:10px 0 0">${esc(w.notes[t])}</p>` : ''}`;
   }
@@ -365,13 +368,13 @@ button{cursor:pointer}
   function renderBoard() {
     const ses = session(), ts = tickers(), s = SNAP || {};
     $('#bar').innerHTML = `<span class="pill${ses.live && LIVE_OK ? ' live' : ''}">${esc(ses.label)}</span>` + (IDX.length ? IDX : s.idx || []).map(i => `<span class="pill num"><small>${esc(i.name)}</small>${n2.format(i.v)} <b class="${ud(i.pct)}">${fm(i.pct, 2)}</b></span>`).join('');
-    $$('#seg button').forEach(b => { b.classList.toggle('on', b.dataset.v === VIEW); b.textContent = ({ watch: 'Theo dõi', held: 'Đang giữ', all: 'Tất cả' })[b.dataset.v] + ' ' + (b.dataset.v === 'watch' ? watch().tickers.length : b.dataset.v === 'held' ? held().length : allTickers().length); });
-    $('#add').hidden = !canWrite();
+    $$('#seg button').forEach(b => { b.classList.toggle('on', b.dataset.v === VIEW); b.textContent = ({ watch: 'Theo dõi', held: 'Đang giữ', all: 'Tất cả' })[b.dataset.v] + ' ' + (b.dataset.v === 'watch' ? wl().length : b.dataset.v === 'held' ? held().length : allTickers().length); });
+    $('#add').hidden = false; $('#add input').placeholder = canWrite() ? 'Thêm mã theo dõi…' : 'Xem nhanh giá một mã…';
     const sig = ts.join(',') + '|' + OPENROW + '|' + (SNAP ? SNAP.ts : 0) + '|' + JSON.stringify(watch().targets) + JSON.stringify(watch().notes);
     if (sig !== LSIG) {
       LSIG = sig;
       $('#list').innerHTML = ts.length ? ts.map(t => `<div class="row${OPENROW === t ? ' open' : ''}" data-t="${esc(t)}"><button class="rh" aria-expanded="${OPENROW === t}">${rowHead(t)}</button><div class="dt">${OPENROW === t ? rowDetail(t) : ''}</div></div>`).join('')
-        : `<div class="empty">${VIEW === 'held' ? 'Chưa có mã nào đang nắm giữ.' : 'Chưa theo dõi mã nào.' + (canWrite() ? ' Gõ mã vào ô ở trên để thêm.' : ' Thêm mã trên máy tính ở bảng giá theo dõi.')}</div>`;
+        : `<div class="empty">${VIEW === 'held' ? 'Chưa có mã nào đang nắm giữ.' : 'Chưa theo dõi mã nào.' + (canWrite() ? ' Gõ mã vào ô ở trên để thêm.' : ' Vào tab Emilya, dán mã truy cập GitHub để thêm mã ngay trên điện thoại.')}</div>`;
     }
     const age = QTS || s.qts;
     $('#src').textContent = LIVE_OK ? `Giá từ ${QSRC}, cập nhật ${hm(QTS)}${ses.live ? ' · tự lấy lại mỗi 15 giây' : ''}. Có thể chậm vài giây.` : `Giá do máy tính đẩy lên lúc ${dmhm(age)}${LIVE_OK === false ? ' (điện thoại chưa tự lấy được giá trực tiếp – mở app trên máy tính để giá được đẩy lên đều)' : ''}.`;
@@ -440,6 +443,7 @@ button{cursor:pointer}
         <div class="note"><b>Sửa danh sách theo dõi trên điện thoại</b>${canWrite() ? (DIRTY ? 'Có thay đổi đang chờ đẩy lên' : 'Được phép · mọi thay đổi đã lưu') : 'Chỉ xem (đường dẫn cài đặt không kèm quyền ghi)'}</div>
         <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" id="bSync" style="flex:1">⟳ Tải lại</button><button class="btn ghost" id="bTheme" style="flex:1">${document.documentElement.dataset.theme === 'dark' ? 'Nền sáng' : 'Nền tối'}</button></div>
         ${LOCAL && !CFG ? '<p class="muted" style="margin:10px 0 0">Đây là bản xem thử trên máy tính (đọc thẳng từ app). Trên điện thoại trang sẽ đọc từ Gist.</p>' : '<button class="btn risk" id="bOut" style="width:100%;margin-top:8px">Xóa dữ liệu khỏi điện thoại này</button>'}</div>
+      ${CFG && !canWrite() ? `<div class="card set"><h2>Bật thêm / sửa mã theo dõi</h2><p style="margin:0;color:var(--tx2)">Dán mã truy cập GitHub (quyền Gist) – mã chỉ lưu trong điện thoại này, không gửi đi đâu ngoài github.com.</p><label for="tkIn">Mã truy cập GitHub</label><input id="tkIn" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="bTok">Bật quyền sửa</button></div>` : ''}
       <p class="muted" style="margin:0 4px">Emilya chỉ hiển thị số liệu app đã tính – không phải lời khuyên mua bán.</p>`;
   }
 
@@ -507,12 +511,15 @@ button{cursor:pointer}
     e.preventDefault();
     const i = e.target.querySelector('input'), t = i.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (t.length < 3) { flash('Mã cổ phiếu có ít nhất 3 ký tự.', true, 2500); return; }
+    if (!canWrite()) { const P = peek(); if (!P.includes(t) && !watch().tickers.includes(t)) P.push(t); LS.set('peek', P); i.value = ''; VIEW = 'watch'; OPENROW = ''; LSIG = ''; render(); liveBad = 0; live(); flash('Đã thêm để xem giá (chỉ trên điện thoại này).', false, 3000); return; }
     stamp(t); if (!WATCH.tickers.includes(t)) WATCH.tickers.push(t); delete WATCH.gone[t];
     i.value = ''; VIEW = VIEW === 'held' ? 'watch' : VIEW; changed(); render(); liveBad = 0; live();
   });
   document.addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.id === 'bSync') { b.disabled = true; LS.del('etag'); await refresh(true); }
+    else if (b.dataset.peekrm) { LS.set('peek', peek().filter(x => x !== b.dataset.peekrm)); OPENROW = ''; LSIG = ''; render(); }
+    else if (b.id === 'bTok') { const v = ($('#tkIn').value || '').trim(); if (v.length < 20) { flash('Mã truy cập chưa đúng – dán lại nhé.', true); return; } CFG = Object.assign({}, CFG, { t: v }); LS.set('cfg', CFG); flash('Đã bật. Thử thêm mã ở Bảng giá nhé.'); render(); }
     else if (b.id === 'bTheme') { const n = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = n; LS.set('theme', n); render(); }
     else if (b.id === 'bOut') { if (confirm('Xóa mật khẩu, mã truy cập và dữ liệu danh mục khỏi điện thoại này? (Dữ liệu trên máy tính và Gist không bị ảnh hưởng.)')) { ['cfg', 'snap', 'watch', 'etag', 'dirty', 'src'].forEach(LS.del); CFG = SNAP = WATCH = null; Q = {}; render(); } }
     else if (b.id === 'emi') { const r = RULES[Math.floor(Math.random() * RULES.length)]; $('#say').innerHTML = `<b>${r[0]}.</b> ${r[1]}`; setTimeout(head, 9000); }

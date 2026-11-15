@@ -1,0 +1,6 @@
+CAC BUOC DUA TRANG DIEN THOAI LEN GITHUB PAGES
+1. Giai nen thanh 5 file: index.html, sw.js, manifest.webmanifest, emilya.webp, app-192.png.
+2. Len github.com, mo kho (repository) Public cua ban -> Add file -> Upload files.
+3. Keo 5 file (khong keo ca thu muc) vao, bam Commit changes. Neu da co file cu thi no se bi ghi de.
+4. Settings -> Pages -> Branch main, thu muc / (root) -> Save. Doi 1-2 phut.
+5. Tren dien thoai: dong han app roi mo lai hai lan de lay ban moi.
