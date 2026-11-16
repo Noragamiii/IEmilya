@@ -296,6 +296,7 @@ details.mo summary::-webkit-details-marker{display:none}
   const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
   const rid = p => p + Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 7);
   const LS = { get(k, d) { try { const v = localStorage.getItem('qm-' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('qm-' + k, JSON.stringify(v)); } catch (e) { /* bỏ qua */ } }, del(k) { try { localStorage.removeItem('qm-' + k); } catch (e) { /* bỏ qua */ } } };
+  const APPV = 'bản 15/11 v7';
   const RECENT_MAX = 10;              // Tra mã: chỉ giữ 10 mã tra gần nhất
   const LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';   // xem thử trên máy tính: đọc thẳng app, không cần Gist
   const th = LS.get('theme', '') || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -801,7 +802,16 @@ details.mo summary::-webkit-details-marker{display:none}
     const wch = x => (x.lv ? `<span class="${ud(x.d1)}">${isN(x.d1) ? (x.d1 >= 0 ? '+' : '−') + n2.format(Math.abs(x.d1)) + ' đ%' : '–'}</span>` : `<span class="${ud(x.d1)}">${fm(x.d1)}</span>`);
     const world = wd.length ? `<div class="card"><h2>Thế giới · tỷ giá · hàng hóa</h2><div class="wg num">${wd.map(x => `<div><small>${esc(String(x.n || '').replace(/\s*\(.*\)\s*$/, ''))}</small><b>${wv(x)}</b>${wch(x)}</div>`).join('')}</div>
       ${(mk.cm || []).length > 6 ? `<button class="btn ghost" id="bWorld" style="width:100%;height:36px;margin-top:8px;font-size:13px">${WORLD_ALL ? 'Thu gọn hàng hóa ▴' : `Xem đủ ${mk.cm.length} hàng hóa ▾`}</button>` : ''}</div>` : '';
-    el.innerHTML = mkt + pfc + todo + opp + movers + csw + world
+    // Định lượng kiểu Jim Simons (17/11/2026): điện thoại KHÔNG tự quét (nặng) – hiện kết quả máy tính đã quét, tự so giá trực tiếp với giá cắt lỗ.
+    const sm = s.sim, smPx = t => quote(t).price;
+    const sim = sm ? `<div class="card"><h2>Định lượng (Jim Simons) <span class="n">giá đến ${esc(dm(sm.last) || '–')}</span></h2>
+      <p class="muted" style="margin:0 0 8px">${esc(sm.head || '')}</p>
+      ${(sm.plans || []).map(p => { const lp = smPx(p.t), hit = isN(lp) && isN(p.stop) && lp <= p.stop, sell = hit || p.code === 'sell';
+        return `<button class="it" data-open="${esc(p.t)}"><span class="ic ${sell ? 'bad' : 'good'}">${sell ? '↓' : '•'}</span><div><b>${esc(p.t)} · ${hit ? 'BÁN NGAY – giá ' + px(lp) + ' ≤ cắt lỗ ' + px(p.stop) : sell ? 'BÁN – hết kỳ giữ' : 'GIỮ ' + p.used + '/' + p.hold + ' phiên'}</b><small>${esc(p.txt)}</small></div></button>`; }).join('')}
+      ${(sm.buy || []).map(x => `<button class="it" data-open="${esc(x.t)}"><span class="ic ${x.spare ? '' : 'good'}">↑</span><div><b>${esc(x.t)} · ${x.spare ? 'dự phòng (vượt trần)' : 'MUA ≤ ' + n0.format(x.sz * 100) + '%'}</b><small>Bán khi giá ≤ ${px(x.stop)} hoặc chậm nhất ${esc(dm(x.until) || '–')} (${x.hold} phiên). ${esc(x.why)}</small></div></button>`).join('')}
+      ${(sm.near || []).length ? `<h3 class="h3">Gần đạt – chỉ theo dõi, không phải tín hiệu mua</h3>${sm.near.map(x => `<button class="it" data-open="${esc(x.t)}"><span class="ic">•</span><div><b>${esc(x.t)} · ${esc(x.sig)}</b><small>EV ${fm(x.ev)} · t ${n1.format(x.to)} / ${n1.format(x.tp)} · thiếu: ${esc(x.miss)}</small></div></button>`).join('')}` : ''}
+      <p class="muted" style="margin:8px 0 0;font-size:12px">Máy tính quét lúc ${dmhm(sm.ts)} trên ${sm.n || '?'} mã. Lớp này chỉ nhìn giá – khối lượng, không thay phân tích BCTC.</p></div>` : '';
+    el.innerHTML = mkt + pfc + todo + sim + opp + movers + csw + world
       + `<p class="muted" style="margin:6px 4px 10px">Máy tính tính lúc ${dmhm(s.ts)}${mk.bts ? ' · bản tin thị trường ' + dmhm(mk.bts) : ''}${LIVE_OK ? ' · giá mã lấy trực tiếp lúc ' + hm(QTS) : ''}. <button class="lk" id="bSync3" style="border:0;background:none;color:var(--pri-ink);font-weight:800;padding:0">⟳ Tải lại</button></p>`;
     const nT = L.filter(x => x.p >= 0.85).length;
     $('#todoN').hidden = !nT; $('#todoN').textContent = nT;
@@ -883,7 +893,7 @@ details.mo summary::-webkit-details-marker{display:none}
         ${LOCAL && !CFG ? '<p class="muted" style="margin:10px 0 0">Đây là bản xem thử trên máy tính (đọc / ghi thẳng vào app). Trên điện thoại trang đi qua Gist.</p>' : '<button class="btn risk" id="bOut" style="width:100%;margin-top:8px">Xóa dữ liệu khỏi điện thoại này</button>'}</div>
       ${CFG && !canWrite() ? `<div class="card set"><h2>Bật quyền sửa (thêm mã, nhập lệnh)</h2><p style="margin:0;color:var(--tx2)">Cách 1: trên máy tính tick «Cho phép điện thoại sửa» rồi lấy lại đường dẫn cài đặt, mở trên điện thoại. Cách 2: dán mã truy cập GitHub (quyền Gist) – mã chỉ lưu trong điện thoại này, không gửi đi đâu ngoài github.com.</p><label for="tkIn">Mã truy cập GitHub</label><input id="tkIn" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="bTok">Bật quyền sửa</button></div>` : ''}
       <div class="card"><h2>7 nguyên tắc của mình</h2>${RULES.map((r, i) => `<div class="rule"><span>${i + 1}</span><b>${r[0]}.</b> ${r[1]}</div>`).join('')}</div>
-      <p class="muted" style="margin:0 4px">Emilya chỉ hiển thị số liệu app đã tính – không phải lời khuyên mua bán.</p>`;
+      <p class="muted" style="margin:0 4px">[${APPV}] Emilya chỉ hiển thị số liệu app đã tính – không phải lời khuyên mua bán.</p>`;
   }
   function renderSetup(err) {
     $('#p-setup').innerHTML = `<div class="card set"><h2>Cài đặt lần đầu</h2>
