@@ -296,7 +296,7 @@ details.mo summary::-webkit-details-marker{display:none}
   const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
   const rid = p => p + Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 7);
   const LS = { get(k, d) { try { const v = localStorage.getItem('qm-' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('qm-' + k, JSON.stringify(v)); } catch (e) { /* bỏ qua */ } }, del(k) { try { localStorage.removeItem('qm-' + k); } catch (e) { /* bỏ qua */ } } };
-  const APPV = 'bản 15/11 v7';
+  const APPV = 'bản 19/11 v11';
   const RECENT_MAX = 10;              // Tra mã: chỉ giữ 10 mã tra gần nhất
   const LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';   // xem thử trên máy tính: đọc thẳng app, không cần Gist
   const th = LS.get('theme', '') || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -722,6 +722,12 @@ details.mo summary::-webkit-details-marker{display:none}
     const s = SNAP; if (!s) return [];
     const L = [], w = watch(), V = pfView(), mk = s.mk || {}, op = s.opp || {}, H = new Set(V.hold.map(h => h.t));
     const add = (p, ic, tone, t, title, sub) => L.push({ p, ic, tone, t, title, sub });
+    const pn = (s.sim || {}).pn;                                       // quy tắc "mua khi hoảng loạn" (bctc/simons.py – 17/11/2026)
+    if (pn) {
+      if (pn.st === 'panic') add(0.97, '★', (pn.c || []).length ? 'good' : 'warn', '', `Thị trường hoảng loạn – ${(pn.c || []).length} mã đủ điều kiện mua`, `Chỉ ${n0.format((pn.br || 0) * 100)}% số mã còn trên MA20. Xem thẻ Định lượng bên dưới.`);
+      for (const x of pn.p || []) if (x.code === 'sell') add(0.96, '↓', 'bad', x.t, `${x.t}: bán lệnh hoảng loạn`, x.txt);
+    }
+    for (const x of (s.sim || {}).abn || []) if (H.has(x.t)) add(0.93, '!', 'bad', x.t, `${x.t}: bất thường riêng – không mua thêm`, `${x.why} (từ ${dm(x.on) || x.on}). Có thể doanh nghiệp có tin riêng – xem lại lý do giữ.`);   /* 19/11 */
     for (const t of new Set([...H, ...w.tickers])) {                   // biến động mạnh, trần / sàn, về giá chờ mua – tính theo giá vừa lấy
       const x = quote(t), p = pctOf(x), tg = (w.targets || {})[t];
       if (isN(x.price) && isN(x.ceil) && x.price >= x.ceil) add(0.95, '▲', 'good', t, `${t} chạm trần ${px(x.price)}`, H.has(t) ? 'Mã đang giữ' : 'Mã theo dõi');
@@ -804,13 +810,21 @@ details.mo summary::-webkit-details-marker{display:none}
       ${(mk.cm || []).length > 6 ? `<button class="btn ghost" id="bWorld" style="width:100%;height:36px;margin-top:8px;font-size:13px">${WORLD_ALL ? 'Thu gọn hàng hóa ▴' : `Xem đủ ${mk.cm.length} hàng hóa ▾`}</button>` : ''}</div>` : '';
     // Định lượng kiểu Jim Simons (17/11/2026): điện thoại KHÔNG tự quét (nặng) – hiện kết quả máy tính đã quét, tự so giá trực tiếp với giá cắt lỗ.
     const sm = s.sim, smPx = t => quote(t).price;
-    const sim = sm ? `<div class="card"><h2>Định lượng (Jim Simons) <span class="n">giá đến ${esc(dm(sm.last) || '–')}</span></h2>
-      <p class="muted" style="margin:0 0 8px">${esc(sm.head || '')}</p>
-      ${(sm.plans || []).map(p => { const lp = smPx(p.t), hit = isN(lp) && isN(p.stop) && lp <= p.stop, sell = hit || p.code === 'sell';
-        return `<button class="it" data-open="${esc(p.t)}"><span class="ic ${sell ? 'bad' : 'good'}">${sell ? '↓' : '•'}</span><div><b>${esc(p.t)} · ${hit ? 'BÁN NGAY – giá ' + px(lp) + ' ≤ cắt lỗ ' + px(p.stop) : sell ? 'BÁN – hết kỳ giữ' : 'GIỮ ' + p.used + '/' + p.hold + ' phiên'}</b><small>${esc(p.txt)}</small></div></button>`; }).join('')}
-      ${(sm.buy || []).map(x => `<button class="it" data-open="${esc(x.t)}"><span class="ic ${x.spare ? '' : 'good'}">↑</span><div><b>${esc(x.t)} · ${x.spare ? 'dự phòng (vượt trần)' : 'MUA ≤ ' + n0.format(x.sz * 100) + '%'}</b><small>Bán khi giá ≤ ${px(x.stop)} hoặc chậm nhất ${esc(dm(x.until) || '–')} (${x.hold} phiên). ${esc(x.why)}</small></div></button>`).join('')}
-      ${(sm.near || []).length ? `<h3 class="h3">Gần đạt – chỉ theo dõi, không phải tín hiệu mua</h3>${sm.near.map(x => `<button class="it" data-open="${esc(x.t)}"><span class="ic">•</span><div><b>${esc(x.t)} · ${esc(x.sig)}</b><small>EV ${fm(x.ev)} · t ${n1.format(x.to)} / ${n1.format(x.tp)} · thiếu: ${esc(x.miss)}</small></div></button>`).join('')}` : ''}
-      <p class="muted" style="margin:8px 0 0;font-size:12px">Máy tính quét lúc ${dmhm(sm.ts)} trên ${sm.n || '?'} mã. Lớp này chỉ nhìn giá – khối lượng, không thay phân tích BCTC.</p></div>` : '';
+    const pn = sm && sm.pn;
+    const pnH = pn ? `<div class="reg" style="margin:0 0 10px"><span class="dot ${pn.st === 'panic' ? 'bad' : pn.st === 'calm' ? 'good' : ''}"></span><div><b>Mua khi hoảng loạn · ${pn.br == null ? '–' : n0.format(pn.br * 100) + '% mã trên MA20'} (ngưỡng ${n0.format((pn.lim || .15) * 100)}%)</b><p>${esc(pn.head || '')}</p>
+        ${isN(pn.win) ? `<p class="muted" style="margin-top:4px">Lịch sử: ${n0.format(pn.n || 0)} lệnh, thắng ${n0.format(pn.win * 100)}%, ${fm(pn.ev)}/lệnh sau phí. Mỗi mã ${n0.format((pn.slot || .03) * 100)}% tài khoản; bán khi cuối phiên giá trên MA5 (từ phiên ${pn.min || 3}), chậm nhất phiên ${pn.max || 10}.</p>` : ''}</div></div>
+      ${(pn.p || []).map(x => { const lp = smPx(x.t), up = isN(lp) && isN(x.thr) && lp > x.thr; return `<button class="it" data-open="${esc(x.t)}"><span class="ic ${x.code === 'sell' ? 'bad' : up ? 'warn' : 'good'}">${x.code === 'sell' ? '↓' : '•'}</span><div><b>${esc(x.t)} · ${x.code === 'sell' ? 'BÁN' : up ? 'giá đang trên mốc bán ' + px(x.thr) : 'GIỮ'}</b><small>${esc(x.txt)}</small></div></button>`; }).join('')}
+      ${pn.st === 'panic' ? (pn.c || []).map((x, i) => `<button class="it" data-open="${esc(x.t)}"><span class="ic good">${i + 1}</span><div><b>${esc(x.t)}${x.h ? ' · đang giữ' : ''} · 5 phiên ${fm(x.r5)}</b><small>Mua ở giá mở cửa phiên tới · giá đóng cửa ${px(x.px)}${isN(smPx(x.t)) ? ' · hiện ' + px(smPx(x.t)) : ''}</small></div></button>`).join('') : ''}` : '';
+    // 20/11: thẻ Định lượng RÚT GỌN – chỉ: kết luận hôm nay, MUA gì, đang giữ thì làm gì, sổ lệnh (điện thoại không tự quét; tự so giá trực tiếp)
+    const td = sm && sm.td;
+    const sim = td ? `<div class="card"><h2>Định lượng – mua / bán gì <span class="n">giá đến ${esc(dm(td.d) || '–')}</span></h2>
+      <p style="margin:0 0 4px;font-size:16px"><b>${esc(td.head)}</b></p><p class="muted" style="margin:0 0 8px;font-size:13px">${esc(td.why)}</p>
+      ${(td.buy || []).map(x => { const lp = quote(x.t).price; return `<button class="it" data-open="${esc(x.t)}"><span class="ic ${x.spare ? '' : 'good'}">${esc(x.tier)}</span><div><b>MUA ${esc(x.t)}</b> · thắng ${n0.format(x.p * 100)}% · ${fm(x.ev)}/lệnh · ${n1.format(x.sz * 100)}% tài sản${x.spare ? ' (dự phòng)' : ''}<small>Mua LO tối đa ${px(x.bmax || x.ceil)} · bán dự kiến ~${px(x.sell)} · cắt lỗ đóng cửa ≤ ${px(x.stop)}${isN(lp) ? ' · giá lúc này ' + px(lp) : ''}</small></div></button>`; }).join('')}
+      ${(td.held || []).map(x => `<button class="it" data-open="${esc(x.t)}"><span class="ic ${/^BÁN/.test(x.a) ? 'bad' : 'good'}">${/^BÁN/.test(x.a) ? '↓' : '•'}</span><div><b>${esc(x.a)} ${esc(x.t)}</b><small>${esc(x.p)}</small></div></button>`).join('')}
+      ${(td.buy || []).length || (td.held || []).length ? `<p class="muted" style="margin:6px 0 0;font-size:12.5px">Bán: ${esc(td.sell)}</p>` : ''}
+      ${(td.wait || []).length ? `<p class="muted" style="margin:6px 0 0;font-size:12.5px">Chờ (mua nếu thị trường hoảng loạn): ${td.wait.map(esc).join(', ')}</p>` : ''}
+      ${Object.keys(td.log || {}).length ? `<p class="muted" style="margin:6px 0 0;font-size:12.5px">Sổ lệnh: ${Object.entries(td.log).map(([k, v]) => `${k} ${v.c} lệnh đóng${v.w != null ? `, thắng ${n0.format(v.w * 100)}% (dự báo ${n0.format((v.pw || 0) * 100)}%)` : ''}`).join(' · ')}</p>` : ''}
+    </div>` : '';
     el.innerHTML = mkt + pfc + todo + sim + opp + movers + csw + world
       + `<p class="muted" style="margin:6px 4px 10px">Máy tính tính lúc ${dmhm(s.ts)}${mk.bts ? ' · bản tin thị trường ' + dmhm(mk.bts) : ''}${LIVE_OK ? ' · giá mã lấy trực tiếp lúc ' + hm(QTS) : ''}. <button class="lk" id="bSync3" style="border:0;background:none;color:var(--pri-ink);font-weight:800;padding:0">⟳ Tải lại</button></p>`;
     const nT = L.filter(x => x.p >= 0.85).length;
