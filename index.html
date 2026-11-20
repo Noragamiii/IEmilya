@@ -823,6 +823,7 @@ details.mo summary::-webkit-details-marker{display:none}
       ${(td.held || []).map(x => `<button class="it" data-open="${esc(x.t)}"><span class="ic ${/^BÁN/.test(x.a) ? 'bad' : 'good'}">${/^BÁN/.test(x.a) ? '↓' : '•'}</span><div><b>${esc(x.a)} ${esc(x.t)}</b><small>${esc(x.p)}</small></div></button>`).join('')}
       ${(td.buy || []).length || (td.held || []).length ? `<p class="muted" style="margin:6px 0 0;font-size:12.5px">Bán: ${esc(td.sell)}</p>` : ''}
       ${(td.wait || []).length ? `<p class="muted" style="margin:6px 0 0;font-size:12.5px">Chờ (mua nếu thị trường hoảng loạn): ${td.wait.map(esc).join(', ')}</p>` : ''}
+      ${td.fp ? `<p class="muted" style="margin:6px 0 0;font-size:11.5px">Dữ liệu máy tính: ${esc(td.fp)}</p>` : ''}
       ${Object.keys(td.log || {}).length ? `<p class="muted" style="margin:6px 0 0;font-size:12.5px">Sổ lệnh: ${Object.entries(td.log).map(([k, v]) => `${k} ${v.c} lệnh đóng${v.w != null ? `, thắng ${n0.format(v.w * 100)}% (dự báo ${n0.format((v.pw || 0) * 100)}%)` : ''}`).join(' · ')}</p>` : ''}
     </div>` : '';
     el.innerHTML = mkt + pfc + todo + sim + opp + movers + csw + world
