@@ -275,6 +275,17 @@ details.mo summary::-webkit-details-marker{display:none}
 .qa button{height:46px;border-radius:13px;border:1px solid var(--bd2);background:var(--sf);font-weight:800;font-size:14px;padding:0 4px;white-space:nowrap}
 .qa button.b{background:var(--up);border-color:var(--up);color:#fff}.qa button.s{background:var(--dn);border-color:var(--dn);color:#fff}
 /* menu dưới */
+.ox-chips{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;margin:0 -2px;scrollbar-width:none}.ox-chips::-webkit-scrollbar{display:none}
+.ox-chips button{flex:0 0 auto;border:1px solid var(--bd);background:var(--sf);color:var(--tx2);border-radius:999px;padding:6px 11px;font-size:13px;font-weight:800;white-space:nowrap}
+.ox-chips button.on{background:var(--pri);border-color:var(--pri);color:#fff}.ox-chips button small{font-weight:700;margin-left:4px}
+.ox-chips.m button{font-size:12px;font-weight:700;padding:5px 10px}
+.ox-sum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:2px 0 10px}.ox-sum div{background:var(--sf2);border-radius:12px;padding:8px 10px}
+.ox-sum small{display:block;color:var(--tx3);font-size:11.5px;font-weight:700}.ox-sum b{font-size:17px}
+table.ox{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+table.ox th{font-size:11.5px;color:var(--tx3);font-weight:800;text-align:right;padding:6px 4px;border-bottom:1px solid var(--bd)}
+table.ox td{text-align:right;padding:8px 4px;border-bottom:1px solid var(--bd)}table.ox th:first-child,table.ox td:first-child{text-align:left}
+table.ox td small{display:block;font-size:10.5px;color:var(--tx3);font-weight:600}table.ox tr.cur td{background:var(--pri-soft)}
+table.ox tr.tot td{font-weight:800;border-bottom:0;background:var(--sf2)}table.ox td.e{color:var(--tx3)}
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;background:var(--sf);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom)}
 .tabs button{position:relative;flex:1;border:0;background:none;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;font-weight:700;color:var(--tx3);padding:0}
 .tabs button svg{width:23px;height:23px}
@@ -303,6 +314,7 @@ details.mo summary::-webkit-details-marker{display:none}
   </section>
   <section id="p-pf" hidden></section>
   <section id="p-news" hidden></section>
+  <section id="p-ops" hidden></section>
   <section id="p-me" hidden></section>
   <section id="p-setup" hidden></section>
 </div>
@@ -311,6 +323,7 @@ details.mo summary::-webkit-details-marker{display:none}
   <button data-p="board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5h16"/><rect x="5.5" y="11" width="3.2" height="6" rx="1"/><rect x="10.4" y="7" width="3.2" height="10" rx="1"/><rect x="15.3" y="13" width="3.2" height="4" rx="1"/></svg>Bảng giá</button>
   <button data-p="pf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12" rx="2.5"/><path d="M9 7.5V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v1.5M3.5 12.5h17"/></svg>Danh mục<sup id="outN" hidden></sup></button>
   <button data-p="news"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4.5" width="16" height="15" rx="2.5"/><path d="M8 9h8M8 12.5h8M8 16h5"/></svg>Tin</button>
+  <button data-p="ops"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4.5" width="16" height="15" rx="2.5"/><path d="M4 9.5h16M9.5 9.5v10M14.5 9.5v10"/></svg>Số liệu</button>
   <button data-p="me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.6A4 4 0 0 1 12 8a4 4 0 0 1 7 2.4C19 15.6 12 20 12 20z"/></svg>Emilya</button>
 </nav>
 <div class="sheet" id="sheet" hidden><div class="pane" id="pane" role="dialog" aria-modal="true"></div></div>
@@ -416,7 +429,7 @@ details.mo summary::-webkit-details-marker{display:none}
   if (!Array.isArray(RECENT)) { RECENT = (LS.get('peek', []) || []).slice(0, RECENT_MAX); LS.set('recent', RECENT); LS.del('peek'); }
   let Q = {}, QT = {}, QTS = 0, QSRC = '', IDXL = {}, IDXT = 0, LIVE_OK = null, MA = null, MSG = null;
   let PAGE = LS.get('page', 'home'), VIEW = LS.get('view', 'watch'), SORT = LS.get('sort', 'def'), OPENROW = '', SHEET = null, PUSHING = false, PUSHERR = '', ACKMSG = '';
-  if (!['home', 'board', 'pf', 'news', 'me'].includes(PAGE)) PAGE = 'home';
+  if (!['home', 'board', 'pf', 'news', 'ops', 'me'].includes(PAGE)) PAGE = 'home';
   if (!['watch', 'held', 'find'].includes(VIEW)) VIEW = 'find';
   const canWrite = () => LOCAL || !!(CFG && CFG.t);
   const session = () => {
@@ -859,7 +872,7 @@ details.mo summary::-webkit-details-marker{display:none}
     }
     const lh = (o.lh || []).filter(r => !r.pt).slice(-1)[0];
     if (lh) h += `<p class="muted" style="margin-top:8px">Lạch Huyện ${per(lh.p)} (thị phần DWT tàu ra): HTIT (PHP) <b>${n1.format(lh.sh.HTIT * 100)}%</b> · HICT ${n1.format(lh.sh.HICT * 100)}% · HHIT ${n1.format(lh.sh.HHIT * 100)}%</p>`;
-    return `<div class="card"><h2>Số liệu tháng <span class="n">cảng: DWT tàu ra · máy tính tính lúc ${dmhm(o.ts)}</span></h2>${h}</div>`;
+    return `<div class="card"><h2>Số liệu tháng <span class="n">cảng: DWT tàu ra</span><button class="lk" data-go="ops">Bảng chi tiết →</button></h2>${h}</div>`;
   }
 
   function simCard(td) {
@@ -1055,6 +1068,104 @@ details.mo summary::-webkit-details-marker{display:none}
     ['Tăng trưởng giải thích được', 'Bán nhiều hơn, tài sản mới thì giữ lâu được. Tăng nhờ giá hàng hóa là chu kỳ – kỷ luật mua bán riêng.'], ['Người lái và tiền thật', 'Lợi nhuận phải về thành tiền, tiền phải về tới cổ đông nhỏ.'],
     ['Giá hợp lý, có biên an toàn', 'Doanh nghiệp tốt mua giá quá cao vẫn là khoản đầu tư kém. Không mua đuổi; đặt sẵn giá chờ.'], ['Tỷ trọng theo độ hiểu', 'Một mã không quá 20–25% tài sản; số mã vừa đủ để theo sát; cẩn trọng với margin.'],
     ['BCTC là kỳ kiểm tra', 'Viết sẵn điều gì khiến mình bán. Bán vì luận điểm sai hoặc giá quá đắt – không bán chỉ vì giá giảm.']];
+  /* 23/11 – TAB "SỐ LIỆU": số liệu kinh doanh theo tháng (bctc/ops.py, máy tính tính sẵn – s.ops.det).
+   * Bố cục chống lướt dài: hàng chip MÃ (cuộn ngang) → hàng chip CHỈ TIÊU (cuộn ngang) → 2 ô tóm tắt → BẢNG 12 THÁNG (hoặc 4 quý) × 2 NĂM + % + dòng LŨY KẾ cùng kỳ
+   * (giống dulieucangbien); bán lẻ thêm 1 khối "tăng trưởng đến từ đâu"; PHP thêm thị phần Lạch Huyện. */
+  let OXT = LS.get('oxt', ''), OXM = LS.get('oxm', 0);
+  function renderOps() {
+    const o = S().ops || {}, D = o.det || [], el = $('#p-ops');
+    if (!D.length) { el.innerHTML = `<div class="card"><h2>Số liệu tháng</h2><p class="muted">Chưa có dữ liệu – mở trang "Số liệu tháng" trên máy tính (bấm "Cập nhật tất cả số liệu") rồi đồng bộ lại.</p></div>`; return; }
+    const it = {}; for (const x of o.it || []) it[x.t] = x;
+    if (!D.some(c => c.t === OXT)) OXT = D[0].t;
+    const c = D.find(x => x.t === OXT), M = c.m;
+    const hasLH = OXT === 'PHP' && (o.lh || []).length;
+    if (OXM === 'lh' && !hasLH) OXM = 0;
+    if (OXM !== 'lh' && OXM >= M.length) OXM = 0;
+    if (OXM === 'lh') return renderLH(o, c, D, it, el);
+    const m = M[OXM], q = c.q, u = m.u || '';
+    const tons = /^triệu tấn/.test(u);
+    const fv = v => !isN(v) ? '–' : tons ? n0.format(v * 1e6) : u === '%' ? n1.format(v) + (m.ab ? '' : '') : Math.abs(v) >= 100 ? n0.format(v) : Math.abs(v) >= 10 ? n1.format(v) : n2.format(v);
+    const unitS = tons ? 'tấn DWT' : u;
+    const V = {}, E = {}; for (const r of m.r) { V[r[0]] = r[1]; if (r[2]) E[r[0]] = 1; }
+    const last = m.r[m.r.length - 1][0], Y = +last.slice(0, 4), n = q ? 4 : 12;
+    const key = (y, i) => q ? `${y}-Q${i}` : `${y}-${String(i).padStart(2, '0')}`;
+    const lab = i => q ? 'Q' + i : 'Tháng ' + i;
+    const run = m.run;
+    const pc = (a, b) => isN(a) && isN(b) && b > 0 ? a / b - 1 : null;
+    const chg = (a, b) => m.ab ? (isN(a) && isN(b) ? `<span class="${ud(a - b)}">${a - b >= 0 ? '+' : ''}${fv(a - b)}${u === '%' ? ' đ' : ''}</span>` : '–') : (() => { const g = pc(a, b); return g == null ? '–' : `<span class="${ud(g)}">${fm(g)}</span>`; })();
+    let rows = '', sa = 0, sb = 0, okSum = m.kd === 'flow', lastFull = 0;
+    for (let i = 1; i <= n; i++) {
+      const a = V[key(Y, i)], b = V[key(Y - 1, i)], isRun = run && run.p === key(Y, i);
+      if (!isN(a) && !isN(b)) continue;
+      let cell;
+      if (isRun) {
+        const ly = isN(run.y) ? a / (1 + run.y) : null;
+        cell = `<td>${fv(b)}${isN(ly) ? `<small>cùng kỳ ${esc(run.c || '')}: ${fv(ly)}</small>` : ''}</td><td><b>${fv(a)}</b><small>▸ tới nay ${esc(run.c || '')}</small></td><td>${isN(run.y) ? `<span class="${ud(run.y)}">${fm(run.y)}</span>` : '–'}</td>`;
+      } else {
+        cell = `<td class="${E[key(Y - 1, i)] ? 'e' : ''}">${fv(b)}</td><td class="${E[key(Y, i)] ? 'e' : ''}">${isN(a) ? '<b>' + fv(a) + '</b>' : '–'}</td><td>${chg(a, b)}</td>`;
+        if (isN(a)) { lastFull = i; if (isN(b)) { sa += a; sb += b; } else okSum = false; }
+      }
+      rows += `<tr class="${key(Y, i) === last ? 'cur' : ''}"><td>${lab(i)}</td>${cell}</tr>`;
+    }
+    for (let i = 1; i <= lastFull; i++) if (!isN(V[key(Y, i)]) || !isN(V[key(Y - 1, i)])) okSum = false;
+    const tot = okSum && lastFull ? `<tr class="tot"><td>Lũy kế cùng kỳ (${q ? 'Q' : 'T'}1–${q ? 'Q' : 'T'}${lastFull})</td><td>${fv(sb)}</td><td>${fv(sa)}</td><td>${chg(sa, sb)}</td></tr>` : '';
+    // tóm tắt: kỳ trọn gần nhất + tháng đang chạy / lũy kế
+    const lf = [...m.r].reverse().find(r => !(run && r[0] === run.p) && !(m.u === '%' && r[2])), lfp = lf && lf[0];
+    const ly0 = lfp && V[(+lfp.slice(0, 4) - 1) + lfp.slice(4)];
+    const per = p => !p ? '' : /Q/.test(p) ? p.slice(5) + '/' + p.slice(0, 4) : 'T' + (+p.slice(5)) + '/' + p.slice(0, 4);
+    const sum = `<div class="ox-sum"><div><small>${q ? 'Quý' : 'Tháng'} gần nhất · ${per(lfp)}</small><b>${fv(lf && lf[1])}</b> <small style="display:inline">${esc(unitS)}</small><br>${chg(lf && lf[1], ly0)} <small style="display:inline">so cùng kỳ</small></div>`
+      + (run ? `<div><small>Tháng đang chạy · ${esc(run.c || '')}</small><b>${fv(V[run.p])}</b><br>${isN(run.y) ? `<span class="${ud(run.y)}">${fm(run.y)}</span>` : '–'} <small style="display:inline">so cùng số ngày</small></div>`
+        : tot ? `<div><small>Lũy kế ${q ? 'Q' : 'T'}1–${q ? 'Q' : 'T'}${lastFull}/${Y}</small><b>${fv(sa)}</b><br>${chg(sa, sb)} <small style="display:inline">cùng kỳ</small></div>` : m.kd === 'ratio' && isN(ly0) ? `<div><small>Cùng kỳ năm trước</small><b>${fv(ly0)}</b> <small style="display:inline">${esc(unitS)}</small></div>`
+        : `<div><small>${m.kd === 'flow' ? 'Lũy kế' : 'Loại số'}</small><b style="font-size:13px">${m.kd === 'flow' ? 'chưa đủ số cùng kỳ' : m.kd === 'cum' ? 'Đã là số lũy kế từ đầu năm' : m.kd === 'stock' ? 'Số cuối kỳ' : 'Tỷ lệ / suy ra'}</b></div>`) + '</div>';
+    let h = `<div class="ox-chips">${D.map(x => { const y = (it[x.t] || {}).y; return `<button data-oxt="${esc(x.t)}" class="${x.t === OXT ? 'on' : ''}">${esc(x.t)}${isN(y) ? `<small class="${x.t === OXT ? '' : ud(y)}">${fm(y, 0)}</small>` : ''}</button>`; }).join('')}</div>`;
+    if (false && c.px && c.px.length) {      // 23/11 (b): bỏ 3 ô thị phần – rối; thay bằng chip "Thị phần Lạch Huyện" như máy tính: 3 ô gọn ở đầu (chi tiết thị phần nằm trong chip chỉ tiêu bên dưới)
+      const X = c.px, L2 = [...X].reverse().find(r => !r[9]) || X[X.length - 1], rn = X[X.length - 1][9] ? X[X.length - 1] : null;
+      const pp = v => isN(v) ? n1.format(v * 100) + '%' : '–';
+      h += `<div class="ox-sum" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:12px">
+        <div><small>PHP ${per(L2[0]).replace('/20', '/')}</small><b>${n2.format(L2[1])}</b><br><span class="${ud(L2[7])}">${fm(L2[7])}</span></div>
+        <div><small>HTIT / PHP</small><b>${pp(L2[5])}</b><br><span class="${ud(L2[8])}" style="font-size:13px">HTIT ${fm(L2[8], 0)}</span></div>
+        <div><small>PHP / cả HP</small><b>${pp(L2[4])}</b><br><small style="display:inline">tr tấn DWT ra</small></div></div>`
+        + (rn ? `<p class="muted" style="margin:-6px 4px 10px;font-size:12.5px">Tháng này tới ${esc(dm(c.last) || '')}: PHP <span class="${ud(rn[7])}">${fm(rn[7])}</span> · HTIT <span class="${ud(rn[8])}">${fm(rn[8])}</span> so cùng số ngày</p>` : '');
+    }
+    h += `<div class="card"><h2>${esc(c.t)} · ${esc(c.nm)}</h2><div class="ox-chips m">${M.map((x, i) => `<button data-oxm="${i}" class="${i === OXM ? 'on' : ''}">${esc(x.n.replace(/Bách Hóa Xanh/g, 'BHX').replace(/MWG toàn công ty/, 'MWG').replace(/ \(.*?\)/, '').replace(' – ', ' · '))}</button>`).join('')}${OXT === 'PHP' && (o.lh || []).length ? '<button data-oxm="lh">Thị phần Lạch Huyện</button>' : ''}</div>`;
+    h += `<div class="muted" style="margin:-2px 0 8px;font-size:12.5px">${esc(m.n)} · đơn vị: ${esc(unitS)}${m.ab ? ' · cột ± là chênh lệch' : ''}</div>` + sum;
+    h += `<table class="ox"><tr><th>${q ? 'Quý' : 'Tháng'}</th><th>${Y - 1}</th><th>${Y}</th><th>±</th></tr>${rows}${tot}</table>`;
+    if (Object.keys(E).length) h += `<p class="muted" style="font-size:11.5px;margin:6px 2px 0">Số màu nhạt = ước tính / suy ra.</p>`;
+    h += `<p class="muted" style="font-size:11.5px;margin:6px 2px 0">${esc(c.nt || '')}</p></div>`;
+    const g = (o.gr || []).find(x => x.t === OXT);
+    if (g) {
+      const x3 = g.a3y > 0 ? g.a3 / g.a3y : null, col = g.c === 'good' ? 'var(--up)' : g.c === 'warn' ? 'var(--warn)' : 'var(--dn)';
+      h += `<div class="card" style="border-left:4px solid ${col}"><h2>Tăng trưởng đến từ đâu · ${per(g.p)}</h2>
+        <div class="ox-sum" style="grid-template-columns:1fr 1fr 1fr"><div><small>Doanh thu</small><b class="${ud(g.r)}">${fm(g.r)}</b></div><div><small>Số cửa hàng</small><b class="${ud(g.s)}">${fm(g.s)}</b></div><div><small>DT / cửa hàng</small><b class="${ud(g.e)}">${fm(g.e)}</b></div></div>
+        <p style="margin:0;font-size:13.5px">${esc(g.tx)}</p>${g.a3 != null ? `<p class="muted" style="margin:6px 0 0;font-size:12.5px">Mở +${n0.format(g.a3)} cửa hàng / 3 ${g.q ? 'quý' : 'tháng'} đến ${per(g.ap)}${g.a3y != null ? ` (cùng kỳ +${n0.format(g.a3y)}${x3 ? x3 >= 1 ? ', nhanh gấp ' + n1.format(x3) + ' lần' : ', bằng ' + n0.format(x3 * 100) + '%' : ''})` : ''}</p>` : ''}</div>`;
+    }
+    if (false && OXT === 'PHP' && (o.lh || []).length) {   // 23/11: đã chuyển thành chip "HTIT / Lạch Huyện" – gọn hơn
+      h += `<div class="card"><h2>Thị phần Lạch Huyện (DWT tàu ra)</h2><table class="ox"><tr><th>Tháng</th><th>HTIT (PHP)</th><th>HICT</th><th>HHIT</th></tr>
+        ${o.lh.slice().reverse().map(r => `<tr><td>${per(r.p)}${r.pt ? '<small>chưa trọn</small>' : ''}</td><td><b>${n1.format(r.sh.HTIT * 100)}%</b></td><td>${n1.format(r.sh.HICT * 100)}%</td><td>${n1.format(r.sh.HHIT * 100)}%</td></tr>`).join('')}</table></div>`;
+    }
+    h += `<p class="muted" style="margin:6px 4px 10px;font-size:12px">Máy tính tính lúc ${dmhm(o.ts)} · thêm / sửa số ở trang "Số liệu tháng" trên máy tính.</p>`;
+    el.innerHTML = h;
+    const ch = el.querySelector('.ox-chips button.on'); if (ch && ch.scrollIntoView) ch.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }
+
+  /* 23/11 (b): thị phần cụm Lạch Huyện – giống trang máy tính: 3 ô (tháng trọn gần nhất, so cùng kỳ) + cột chồng 100% có ghi % */
+  function renderLH(o, c, D, it, el) {
+    const L = o.lh.slice(-12), lf = [...o.lh].reverse().find(r => !r.pt), K = ['HTIT', 'HICT', 'HHIT'];
+    const COL = { HTIT: 'var(--pri)', HICT: '#1FA393', HHIT: '#E8A33A' };
+    const per = p => 'T' + (+p.slice(5)) + '/' + p.slice(2, 4);
+    const ly = lf && o.lh.find(r => r.p === (+lf.p.slice(0, 4) - 1) + lf.p.slice(4));
+    const pc = v => n0.format(v * 100) + '%';
+    const W = 360, H = 200, B = 18, bw = W / L.length;
+    let g = '';
+    L.forEach((r, i) => { let acc = 0; for (const k of K) { const v = r.sh[k] || 0, hh = (H - B) * v, y = H - B - (H - B) * (acc + v); g += `<rect x="${i * bw + 1.5}" y="${y}" width="${bw - 3}" height="${hh}" fill="${COL[k]}" opacity="${r.pt ? .45 : 1}"/>` + (v >= .1 ? `<text x="${i * bw + bw / 2}" y="${y + hh / 2 + 3.5}" font-size="9.5" font-weight="800" text-anchor="middle" fill="#fff" stroke="rgba(0,0,0,.4)" stroke-width="2" paint-order="stroke">${Math.round(v * 100)}</text>` : ''); acc += v; }
+      g += `<text x="${i * bw + bw / 2}" y="${H - 4}" font-size="9" text-anchor="middle" fill="currentColor" opacity=".6">${+r.p.slice(5)}/${r.p.slice(2, 4)}</text>`; });
+    let h = `<div class="ox-chips">${D.map(x => { const y = (it[x.t] || {}).y; return `<button data-oxt="${esc(x.t)}" class="${x.t === OXT ? 'on' : ''}">${esc(x.t)}${isN(y) ? `<small class="${x.t === OXT ? '' : ud(y)}">${fm(y, 0)}</small>` : ''}</button>`; }).join('')}</div>`;
+    h += `<div class="card"><h2>${esc(c.t)} · ${esc(c.nm)}</h2><div class="ox-chips m">${c.m.map((x, i) => `<button data-oxm="${i}">${esc(x.n.replace(/ \(.*?\)/, ''))}</button>`).join('')}<button data-oxm="lh" class="on">Thị phần Lạch Huyện</button></div>`;
+    h += `<div class="ox-sum" style="grid-template-columns:1fr 1fr 1fr">${K.map(k => `<div><small><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${COL[k]}"></i> ${k}${k === 'HTIT' ? ' (PHP)' : ''} · ${lf ? per(lf.p) : ''}</small><b>${lf ? pc(lf.sh[k]) : '–'}</b><br><small style="display:inline">cùng kỳ ${ly ? pc(ly.sh[k]) : '–'}</small></div>`).join('')}</div>`;
+    h += `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${g}</svg><p class="muted" style="font-size:11.5px;margin:6px 2px 0">% DWT tàu ra trong cụm Lạch Huyện · HICT bến 1–2, HTIT bến 3–4, HHIT bến 5–6 · cột nhạt = tháng chưa trọn.</p></div>`;
+    el.innerHTML = h;
+  }
+
   function renderMe() {
     const s = SNAP, pend = OUTBOX.length + (WPEND ? 1 : 0);
     $('#p-me').innerHTML = `<div class="card"><h2>Đồng bộ với máy tính</h2>
@@ -1085,10 +1196,10 @@ details.mo summary::-webkit-details-marker{display:none}
     $('#p-setup').hidden = !need; $('#tabs').hidden = need;
     $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.p === PAGE));
     head(); renderSyn();
-    if (need) { ['home', 'board', 'pf', 'news', 'me'].forEach(p => { $('#p-' + p).hidden = true; }); renderSetup(); return; }
+    if (need) { ['home', 'board', 'pf', 'news', 'ops', 'me'].forEach(p => { $('#p-' + p).hidden = true; }); renderSetup(); return; }
     if (typing() && !force) return;                    // đang gõ dở (ghi chú, giá chờ mua…) → không vẽ lại kẻo mất chữ
-    ['home', 'board', 'pf', 'news', 'me'].forEach(p => { $('#p-' + p).hidden = PAGE !== p; });
-    if (PAGE === 'home') renderHome(); else if (PAGE === 'board') renderBoard(); else if (PAGE === 'pf') renderPf(); else if (PAGE === 'news') renderNews(); else renderMe();
+    ['home', 'board', 'pf', 'news', 'ops', 'me'].forEach(p => { $('#p-' + p).hidden = PAGE !== p; });
+    if (PAGE === 'home') renderHome(); else if (PAGE === 'board') renderBoard(); else if (PAGE === 'pf') renderPf(); else if (PAGE === 'news') renderNews(); else if (PAGE === 'ops') renderOps(); else renderMe();
     if (PAGE !== 'home') { const nT = todoList().filter(x => x.p >= 0.85).length; $('#todoN').hidden = !nT; $('#todoN').textContent = nT; }
   }
 
@@ -1259,6 +1370,8 @@ details.mo summary::-webkit-details-marker{display:none}
     if (d.open && !d.go) { openSheet({ k: 't', t: d.open }); return; }
     if (d.close !== undefined) { closeSheet(); return; }
     if (d.go) { PAGE = d.go; LS.set('page', PAGE); render(true); window.scrollTo(0, 0); liveSoon(); return; }
+    if (d.oxt) { OXT = d.oxt; OXM = 0; LS.set('oxt', OXT); LS.set('oxm', 0); renderOps(); return; }
+    if (d.oxm !== undefined) { OXM = d.oxm === 'lh' ? 'lh' : +d.oxm; LS.set('oxm', OXM); renderOps(); return; }
     if (d.addw) { if (addWatch(d.addw)) { rerender(); flash(`Đã thêm ${d.addw} vào Theo dõi.`, false, 2500); } return; }
     if (d.buy) { txOpen('BUY', d.buy); return; }
     if (d.sell) { txOpen('SELL', d.sell); return; }
