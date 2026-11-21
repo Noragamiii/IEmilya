@@ -279,6 +279,7 @@ details.mo summary::-webkit-details-marker{display:none}
 .ox-chips button{flex:0 0 auto;border:1px solid var(--bd);background:var(--sf);color:var(--tx2);border-radius:999px;padding:6px 11px;font-size:13px;font-weight:800;white-space:nowrap}
 .ox-chips button.on{background:var(--pri);border-color:var(--pri);color:#fff}.ox-chips button small{font-weight:700;margin-left:4px}
 .ox-chips.m button{font-size:12px;font-weight:700;padding:5px 10px}
+.ox-seg{display:flex;gap:4px;background:var(--sf2);border-radius:12px;padding:3px;margin:0 0 8px}.ox-seg button{flex:1;border:0;background:transparent;color:var(--tx2);border-radius:9px;padding:7px 0;font-size:13.5px;font-weight:800}.ox-seg button.on{background:var(--sf);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .ox-sum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:2px 0 10px}.ox-sum div{background:var(--sf2);border-radius:12px;padding:8px 10px}
 .ox-sum small{display:block;color:var(--tx3);font-size:11.5px;font-weight:700}.ox-sum b{font-size:17px}
 table.ox{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
@@ -778,11 +779,12 @@ table.ox tr.tot td{font-weight:800;border-bottom:0;background:var(--sf2)}table.o
   function todoList() {
     const s = SNAP; if (!s) return [];
     const L = [], w = watch(), V = pfView(), mk = s.mk || {}, op = s.opp || {}, H = new Set(V.hold.map(h => h.t));
-    const add = (p, ic, tone, t, title, sub) => L.push({ p, ic, tone, t, title, sub });
+    const SEEN = new Set();   // 23/11: cảnh báo TRÙNG (cùng mã + cùng tiêu đề) chỉ giữ 1 dòng – dòng đầu tiên = mới / quan trọng nhất
+    const add = (p, ic, tone, t, title, sub) => { const k = (t || '') + '|' + title; if (SEEN.has(k)) return; SEEN.add(k); L.push({ p, ic, tone, t, title, sub }); };
     const pn = (s.sim || {}).pn;                                       // quy tắc "mua khi hoảng loạn" (bctc/simons.py – 17/11/2026)
     if (pn) {
       if (pn.st === 'panic') add(0.97, '★', (pn.c || []).length ? 'good' : 'warn', '', `Thị trường hoảng loạn – ${(pn.c || []).length} mã đủ điều kiện mua`, `Chỉ ${n0.format((pn.br || 0) * 100)}% số mã còn trên MA20. Xem thẻ Định lượng bên dưới.`);
-      for (const x of pn.p || []) if (x.code === 'sell') add(0.96, '↓', 'bad', x.t, `${x.t}: bán lệnh hoảng loạn`, x.txt);
+      for (const x of pn.p || []) if (x.code === 'sell') add(0.96, '↓', 'bad', x.t, `${x.t}: ${/MUA SỚM/.test(x.txt || '') ? 'bán lệnh mua sớm' : 'bán lệnh hoảng loạn'}`, x.txt);
     }
     for (const x of (s.sim || {}).abn || []) if (H.has(x.t)) add(0.93, '!', 'bad', x.t, `${x.t}: bất thường riêng – không mua thêm`, `${x.why} (từ ${dm(x.on) || x.on}). Có thể doanh nghiệp có tin riêng – xem lại lý do giữ.`);   /* 19/11 */
     for (const t of new Set([...H, ...w.tickers])) {                   // biến động mạnh, trần / sàn, về giá chờ mua – tính theo giá vừa lấy
@@ -1072,6 +1074,13 @@ table.ox tr.tot td{font-weight:800;border-bottom:0;background:var(--sf2)}table.o
    * Bố cục chống lướt dài: hàng chip MÃ (cuộn ngang) → hàng chip CHỈ TIÊU (cuộn ngang) → 2 ô tóm tắt → BẢNG 12 THÁNG (hoặc 4 quý) × 2 NĂM + % + dòng LŨY KẾ cùng kỳ
    * (giống dulieucangbien); bán lẻ thêm 1 khối "tăng trưởng đến từ đâu"; PHP thêm thị phần Lạch Huyện. */
   let OXT = LS.get('oxt', ''), OXM = LS.get('oxm', 0);
+  /* 23/11: 2 nhóm "Doanh nghiệp | Vĩ mô" – vĩ mô (FDI, XNK, giá, tiền tệ…) gắn mã liên quan, tách riêng cho đỡ dài hàng chip */
+  const oxVm = c => c.sec === 'Vĩ mô';
+  function oxTabs(D, it) {
+    const cur = D.find(c => c.t === OXT), G = cur && oxVm(cur) ? 'vm' : 'dn', L = D.filter(c => (G === 'vm') === oxVm(c));
+    return (D.some(oxVm) ? `<div class="ox-seg"><button data-oxg="dn" class="${G === 'dn' ? 'on' : ''}">Doanh nghiệp</button><button data-oxg="vm" class="${G === 'vm' ? 'on' : ''}">Vĩ mô</button></div>` : '')
+      + `<div class="ox-chips">${L.map(x => { const y = (it[x.t] || {}).y; return `<button data-oxt="${esc(x.t)}" class="${x.t === OXT ? 'on' : ''}">${esc(x.lb || x.t)}${isN(y) ? `<small class="${x.t === OXT ? '' : ud(y)}">${fm(y, 0)}</small>` : ''}</button>`; }).join('')}</div>`;
+  }
   function renderOps() {
     const o = S().ops || {}, D = o.det || [], el = $('#p-ops');
     if (!D.length) { el.innerHTML = `<div class="card"><h2>Số liệu tháng</h2><p class="muted">Chưa có dữ liệu – mở trang "Số liệu tháng" trên máy tính (bấm "Cập nhật tất cả số liệu") rồi đồng bộ lại.</p></div>`; return; }
@@ -1094,16 +1103,18 @@ table.ox tr.tot td{font-weight:800;border-bottom:0;background:var(--sf2)}table.o
     const pc = (a, b) => isN(a) && isN(b) && b > 0 ? a / b - 1 : null;
     const chg = (a, b) => m.ab ? (isN(a) && isN(b) ? `<span class="${ud(a - b)}">${a - b >= 0 ? '+' : ''}${fv(a - b)}${u === '%' ? ' đ' : ''}</span>` : '–') : (() => { const g = pc(a, b); return g == null ? '–' : `<span class="${ud(g)}">${fm(g)}</span>`; })();
     let rows = '', sa = 0, sb = 0, okSum = m.kd === 'flow', lastFull = 0;
+    // 23/11 (g): gãy chuỗi (VD Cảng vụ Đồng Nai thôi khai sà lan từ T7/2026) → 12 tháng từ mốc ghi "không so"
+    const bkEnd = m.bk ? (+m.bk.slice(0, 4) + 1) + m.bk.slice(4) : null, isBk = p => m.bk && p >= m.bk && p < bkEnd;
     for (let i = 1; i <= n; i++) {
       const a = V[key(Y, i)], b = V[key(Y - 1, i)], isRun = run && run.p === key(Y, i);
       if (!isN(a) && !isN(b)) continue;
       let cell;
       if (isRun) {
         const ly = isN(run.y) ? a / (1 + run.y) : null;
-        cell = `<td>${fv(b)}${isN(ly) ? `<small>cùng kỳ ${esc(run.c || '')}: ${fv(ly)}</small>` : ''}</td><td><b>${fv(a)}</b><small>▸ tới nay ${esc(run.c || '')}</small></td><td>${isN(run.y) ? `<span class="${ud(run.y)}">${fm(run.y)}</span>` : '–'}</td>`;
+        cell = `<td>${fv(b)}${isN(ly) ? `<small>cùng kỳ ${esc(run.c || '')}: ${fv(ly)}</small>` : ''}</td><td><b>${fv(a)}</b><small>▸ tới nay ${esc(run.c || '')}</small></td><td>${isBk(key(Y, i)) ? '<small>không so</small>' : isN(run.y) ? `<span class="${ud(run.y)}">${fm(run.y)}</span>` : '–'}</td>`;
       } else {
-        cell = `<td class="${E[key(Y - 1, i)] ? 'e' : ''}">${fv(b)}</td><td class="${E[key(Y, i)] ? 'e' : ''}">${isN(a) ? '<b>' + fv(a) + '</b>' : '–'}</td><td>${chg(a, b)}</td>`;
-        if (isN(a)) { lastFull = i; if (isN(b)) { sa += a; sb += b; } else okSum = false; }
+        cell = `<td class="${E[key(Y - 1, i)] ? 'e' : ''}">${fv(b)}</td><td class="${E[key(Y, i)] ? 'e' : ''}">${isN(a) ? '<b>' + fv(a) + '</b>' : '–'}</td><td>${isBk(key(Y, i)) ? '<small>không so</small>' : chg(a, b)}</td>`;
+        if (isN(a)) { lastFull = i; if (isN(b) && !isBk(key(Y, i))) { sa += a; sb += b; } else okSum = false; }
       }
       rows += `<tr class="${key(Y, i) === last ? 'cur' : ''}"><td>${lab(i)}</td>${cell}</tr>`;
     }
@@ -1113,11 +1124,11 @@ table.ox tr.tot td{font-weight:800;border-bottom:0;background:var(--sf2)}table.o
     const lf = [...m.r].reverse().find(r => !(run && r[0] === run.p) && !(m.u === '%' && r[2])), lfp = lf && lf[0];
     const ly0 = lfp && V[(+lfp.slice(0, 4) - 1) + lfp.slice(4)];
     const per = p => !p ? '' : /Q/.test(p) ? p.slice(5) + '/' + p.slice(0, 4) : 'T' + (+p.slice(5)) + '/' + p.slice(0, 4);
-    const sum = `<div class="ox-sum"><div><small>${q ? 'Quý' : 'Tháng'} gần nhất · ${per(lfp)}</small><b>${fv(lf && lf[1])}</b> <small style="display:inline">${esc(unitS)}</small><br>${chg(lf && lf[1], ly0)} <small style="display:inline">so cùng kỳ</small></div>`
+    const sum = `<div class="ox-sum"><div><small>${q ? 'Quý' : 'Tháng'} gần nhất · ${per(lfp)}</small><b>${fv(lf && lf[1])}</b> <small style="display:inline">${esc(unitS)}</small><br>${isBk(lfp) ? '<small style="display:inline">không so cùng kỳ (đổi cách khai)</small>' : chg(lf && lf[1], ly0) + ' <small style="display:inline">so cùng kỳ</small>'}</div>`
       + (run ? `<div><small>Tháng đang chạy · ${esc(run.c || '')}</small><b>${fv(V[run.p])}</b><br>${isN(run.y) ? `<span class="${ud(run.y)}">${fm(run.y)}</span>` : '–'} <small style="display:inline">so cùng số ngày</small></div>`
         : tot ? `<div><small>Lũy kế ${q ? 'Q' : 'T'}1–${q ? 'Q' : 'T'}${lastFull}/${Y}</small><b>${fv(sa)}</b><br>${chg(sa, sb)} <small style="display:inline">cùng kỳ</small></div>` : m.kd === 'ratio' && isN(ly0) ? `<div><small>Cùng kỳ năm trước</small><b>${fv(ly0)}</b> <small style="display:inline">${esc(unitS)}</small></div>`
         : `<div><small>${m.kd === 'flow' ? 'Lũy kế' : 'Loại số'}</small><b style="font-size:13px">${m.kd === 'flow' ? 'chưa đủ số cùng kỳ' : m.kd === 'cum' ? 'Đã là số lũy kế từ đầu năm' : m.kd === 'stock' ? 'Số cuối kỳ' : 'Tỷ lệ / suy ra'}</b></div>`) + '</div>';
-    let h = `<div class="ox-chips">${D.map(x => { const y = (it[x.t] || {}).y; return `<button data-oxt="${esc(x.t)}" class="${x.t === OXT ? 'on' : ''}">${esc(x.t)}${isN(y) ? `<small class="${x.t === OXT ? '' : ud(y)}">${fm(y, 0)}</small>` : ''}</button>`; }).join('')}</div>`;
+    let h = oxTabs(D, it);
     if (false && c.px && c.px.length) {      // 23/11 (b): bỏ 3 ô thị phần – rối; thay bằng chip "Thị phần Lạch Huyện" như máy tính: 3 ô gọn ở đầu (chi tiết thị phần nằm trong chip chỉ tiêu bên dưới)
       const X = c.px, L2 = [...X].reverse().find(r => !r[9]) || X[X.length - 1], rn = X[X.length - 1][9] ? X[X.length - 1] : null;
       const pp = v => isN(v) ? n1.format(v * 100) + '%' : '–';
@@ -1127,10 +1138,11 @@ table.ox tr.tot td{font-weight:800;border-bottom:0;background:var(--sf2)}table.o
         <div><small>PHP / cả HP</small><b>${pp(L2[4])}</b><br><small style="display:inline">tr tấn DWT ra</small></div></div>`
         + (rn ? `<p class="muted" style="margin:-6px 4px 10px;font-size:12.5px">Tháng này tới ${esc(dm(c.last) || '')}: PHP <span class="${ud(rn[7])}">${fm(rn[7])}</span> · HTIT <span class="${ud(rn[8])}">${fm(rn[8])}</span> so cùng số ngày</p>` : '');
     }
-    h += `<div class="card"><h2>${esc(c.t)} · ${esc(c.nm)}</h2><div class="ox-chips m">${M.map((x, i) => `<button data-oxm="${i}" class="${i === OXM ? 'on' : ''}">${esc(x.n.replace(/Bách Hóa Xanh/g, 'BHX').replace(/MWG toàn công ty/, 'MWG').replace(/ \(.*?\)/, '').replace(' – ', ' · '))}</button>`).join('')}${OXT === 'PHP' && (o.lh || []).length ? '<button data-oxm="lh">Thị phần Lạch Huyện</button>' : ''}</div>`;
+    h += `<div class="card"><h2>${oxVm(c) ? '' : esc(c.t) + ' · '}${esc(c.nm)}</h2>${c.imp ? `<div class="muted" style="font-size:12.5px;margin:-4px 0 8px">Mã liên quan: <b>${esc(c.imp)}</b></div>` : ''}<div class="ox-chips m">${M.map((x, i) => `<button data-oxm="${i}" class="${i === OXM ? 'on' : ''}">${esc(x.n.replace(/Bách Hóa Xanh/g, 'BHX').replace(/MWG toàn công ty/, 'MWG').replace(/ \(.*?\)/, '').replace(' – ', ' · '))}</button>`).join('')}${OXT === 'PHP' && (o.lh || []).length ? '<button data-oxm="lh">Thị phần Lạch Huyện</button>' : ''}</div>`;
     h += `<div class="muted" style="margin:-2px 0 8px;font-size:12.5px">${esc(m.n)} · đơn vị: ${esc(unitS)}${m.ab ? ' · cột ± là chênh lệch' : ''}</div>` + sum;
     h += `<table class="ox"><tr><th>${q ? 'Quý' : 'Tháng'}</th><th>${Y - 1}</th><th>${Y}</th><th>±</th></tr>${rows}${tot}</table>`;
     if (Object.keys(E).length) h += `<p class="muted" style="font-size:11.5px;margin:6px 2px 0">Số màu nhạt = ước tính / suy ra.</p>`;
+    if (m.bk) h += `<p class="muted" style="font-size:11.5px;margin:6px 2px 0">⚠ Từ ${per(m.bk)} Cảng vụ thôi khai sà lan → không so cùng kỳ 12 tháng (khác cách tính).</p>`;
     h += `<p class="muted" style="font-size:11.5px;margin:6px 2px 0">${esc(c.nt || '')}</p></div>`;
     const g = (o.gr || []).find(x => x.t === OXT);
     if (g) {
@@ -1159,7 +1171,7 @@ table.ox tr.tot td{font-weight:800;border-bottom:0;background:var(--sf2)}table.o
     let g = '';
     L.forEach((r, i) => { let acc = 0; for (const k of K) { const v = r.sh[k] || 0, hh = (H - B) * v, y = H - B - (H - B) * (acc + v); g += `<rect x="${i * bw + 1.5}" y="${y}" width="${bw - 3}" height="${hh}" fill="${COL[k]}" opacity="${r.pt ? .45 : 1}"/>` + (v >= .1 ? `<text x="${i * bw + bw / 2}" y="${y + hh / 2 + 3.5}" font-size="9.5" font-weight="800" text-anchor="middle" fill="#fff" stroke="rgba(0,0,0,.4)" stroke-width="2" paint-order="stroke">${Math.round(v * 100)}</text>` : ''); acc += v; }
       g += `<text x="${i * bw + bw / 2}" y="${H - 4}" font-size="9" text-anchor="middle" fill="currentColor" opacity=".6">${+r.p.slice(5)}/${r.p.slice(2, 4)}</text>`; });
-    let h = `<div class="ox-chips">${D.map(x => { const y = (it[x.t] || {}).y; return `<button data-oxt="${esc(x.t)}" class="${x.t === OXT ? 'on' : ''}">${esc(x.t)}${isN(y) ? `<small class="${x.t === OXT ? '' : ud(y)}">${fm(y, 0)}</small>` : ''}</button>`; }).join('')}</div>`;
+    let h = oxTabs(D, it);
     h += `<div class="card"><h2>${esc(c.t)} · ${esc(c.nm)}</h2><div class="ox-chips m">${c.m.map((x, i) => `<button data-oxm="${i}">${esc(x.n.replace(/ \(.*?\)/, ''))}</button>`).join('')}<button data-oxm="lh" class="on">Thị phần Lạch Huyện</button></div>`;
     h += `<div class="ox-sum" style="grid-template-columns:1fr 1fr 1fr">${K.map(k => `<div><small><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${COL[k]}"></i> ${k}${k === 'HTIT' ? ' (PHP)' : ''} · ${lf ? per(lf.p) : ''}</small><b>${lf ? pc(lf.sh[k]) : '–'}</b><br><small style="display:inline">cùng kỳ ${ly ? pc(ly.sh[k]) : '–'}</small></div>`).join('')}</div>`;
     h += `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${g}</svg><p class="muted" style="font-size:11.5px;margin:6px 2px 0">% DWT tàu ra trong cụm Lạch Huyện · HICT bến 1–2, HTIT bến 3–4, HHIT bến 5–6 · cột nhạt = tháng chưa trọn.</p></div>`;
@@ -1370,6 +1382,7 @@ table.ox tr.tot td{font-weight:800;border-bottom:0;background:var(--sf2)}table.o
     if (d.open && !d.go) { openSheet({ k: 't', t: d.open }); return; }
     if (d.close !== undefined) { closeSheet(); return; }
     if (d.go) { PAGE = d.go; LS.set('page', PAGE); render(true); window.scrollTo(0, 0); liveSoon(); return; }
+    if (d.oxg) { const L = ((S().ops || {}).det || []).filter(c => (d.oxg === 'vm') === oxVm(c)); if (L.length && !L.some(c => c.t === OXT)) { OXT = L[0].t; OXM = 0; LS.set('oxt', OXT); LS.set('oxm', 0); } renderOps(); return; }
     if (d.oxt) { OXT = d.oxt; OXM = 0; LS.set('oxt', OXT); LS.set('oxm', 0); renderOps(); return; }
     if (d.oxm !== undefined) { OXM = d.oxm === 'lh' ? 'lh' : +d.oxm; LS.set('oxm', OXM); renderOps(); return; }
     if (d.addw) { if (addWatch(d.addw)) { rerender(); flash(`Đã thêm ${d.addw} vào Theo dõi.`, false, 2500); } return; }
